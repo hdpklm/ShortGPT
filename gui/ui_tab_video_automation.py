@@ -50,8 +50,9 @@ class VideoAutomationUI(AbstractComponentUI):
     def is_key_missing(self):
         openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
         gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-        if not openai_key and not gemini_key:
-            return "Your Genmini or OpenAI key is missing. Please go to the config tab and enter the API key."
+        llm_base_url = ApiKeyManager.get_api_key("LLM_BASE_URL")
+        if not openai_key and not gemini_key and not llm_base_url:
+            return "Your Gemini, OpenAI or Local LLM endpoint is missing. Please go to the config tab and enter it."
 
         pexels_api_key = ApiKeyManager.get_api_key("PEXELS_API_KEY")
         if not pexels_api_key:
@@ -194,7 +195,7 @@ class VideoAutomationUI(AbstractComponentUI):
                 self.msg = gr.Textbox()
                 self.restart_button = gr.Button("Restart")
                 self.video_folder = gr.Button("📁", visible=False)
-                self.video_folder.click(lambda _: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
+                self.video_folder.click(lambda: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
                 respond = self.chatbot_conversation()
 
             self.errorHTML = gr.HTML(visible=False)

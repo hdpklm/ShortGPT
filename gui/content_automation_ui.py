@@ -21,9 +21,9 @@ class GradioContentAutomationUI:
             short_automation_ui = ShortAutomationUI(self.shortGPTUI).create_ui()
             video_translation_ui = VideoTranslationUI(self.shortGPTUI).create_ui()
             def onChange(x):
-                showShorts= x == choice.choices[0][0]
-                showVideo = x == choice.choices[1][0]
-                showTranslation= x == choice.choices[2][0]
+                showShorts = x == '🎬 Automate the creation of shorts'
+                showVideo = x == '🎞️ Automate a video with stock assets'
+                showTranslation = x == '🌐 Automate multilingual video dubbing'
                 return gr.update(visible=showShorts), gr.update(visible=showVideo), gr.update(visible=showTranslation)
-            choice.change(onChange, [choice], [short_automation_ui,video_automation_ui, video_translation_ui])
+            choice.change(onChange, [choice], [short_automation_ui, video_automation_ui, video_translation_ui])
         return self.content_automation_ui

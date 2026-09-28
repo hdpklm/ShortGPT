@@ -71,10 +71,17 @@ def ChunkForAudio(alltext, chunk_size=2500):
 
 def audioToText(filename, model_size="base"):
     from whisper_timestamped import load_model, transcribe_timestamped
-    global WHISPER_MODEL
-    if (WHISPER_MODEL == None):
-        WHISPER_MODEL = load_model(model_size)
-    gen = transcribe_timestamped(WHISPER_MODEL, filename, verbose=False, fp16=False)
+    # global WHISPER_MODEL
+    # if (WHISPER_MODEL == None):
+    #     WHISPER_MODEL = load_model(model_size)
+    import gc
+    import torch
+    model = load_model(model_size)
+    gen = transcribe_timestamped(model, filename, verbose=False, fp16=False)
+    del model
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return gen
 
 

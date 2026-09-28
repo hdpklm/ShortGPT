@@ -36,7 +36,15 @@ class AssetDatabase:
 
     local_assets = TinyMongoDocument("asset_db", "asset_collection", "local_assets", create=True)
     remote_assets = TinyMongoDocument("asset_db", "asset_collection", "remote_assets", create=True)
-    if not remote_assets._get('subscribe animation'):
+    if not local_assets._get('subscribe animation') and Path("public/subscribe-animation.mp4").exists():
+        local_assets._save({
+            'subscribe animation': {
+                "type": AssetType.VIDEO.value,
+                "path": "public/subscribe-animation.mp4",
+                "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        })
+    elif not remote_assets._get('subscribe animation'):
         remote_assets._save({
             'subscribe animation':{
                 "type": AssetType.VIDEO.value,
@@ -47,7 +55,9 @@ class AssetDatabase:
 
     @classmethod
     def asset_exists(cls, name: str) -> bool:
-        return name in cls.local_assets._get() or name in cls.remote_assets._get()
+        local = cls.local_assets._get() or {}
+        remote = cls.remote_assets._get() or {}
+        return name in local or name in remote
 
     @classmethod
     def add_local_asset(cls, name: str, asset_type: AssetType, path: str):
@@ -71,9 +81,11 @@ class AssetDatabase:
 
     @classmethod
     def remove_asset(cls, name: str):
-        if name in cls.local_assets._get():
+        local = cls.local_assets._get() or {}
+        remote = cls.remote_assets._get() or {}
+        if name in local:
             cls._remove_local_asset(name)
-        elif name in cls.remote_assets._get():
+        elif name in remote:
             cls.remote_assets._delete(name)
         else:
             raise ValueError(f"Asset '{name}' does not exist in the database.")
@@ -82,22 +94,26 @@ class AssetDatabase:
     def get_df(cls, source=None) -> pd.DataFrame:
         cls.sync_local_assets()
         data = []
+        local = cls.local_assets._get() or {}
+        remote = cls.remote_assets._get() or {}
         if source is None or source == 'local':
-            for key, asset in cls.local_assets._get().items():
-                data.append({'name': key,
-                             'type': asset['type'],
-                             'link': asset['path'],
-                             'source': 'local',
-                             'ts': asset.get('ts')
-                             })
+            for key, asset in local.items():
+                if isinstance(asset, dict) and 'type' in asset and 'path' in asset:
+                    data.append({'name': key,
+                                 'type': asset['type'],
+                                 'link': asset['path'],
+                                 'source': 'local',
+                                 'ts': asset.get('ts')
+                                 })
         if source is None or source == 'youtube':
-            for key, asset in cls.remote_assets._get().items():
-                data.append({'name': key,
-                            'type': asset['type'],
-                             'link': asset['url'],
-                             'source': 'youtube' if 'youtube' in asset['url'] else 'internet',
-                             'ts': asset.get('ts')
-                             })
+            for key, asset in remote.items():
+                if isinstance(asset, dict) and 'type' in asset and 'url' in asset:
+                    data.append({'name': key,
+                                'type': asset['type'],
+                                 'link': asset['url'],
+                                 'source': 'youtube' if 'youtube' in asset['url'] else 'internet',
+                                 'ts': asset.get('ts')
+                                 })
 
         df = pd.DataFrame(data)
         if (not df.empty):
@@ -110,8 +126,8 @@ class AssetDatabase:
         """
         Loads all local assets from the static-assets folder into the database.
         """
-        local_assets = cls.local_assets._get()
-        local_paths = {asset['path'] for asset in local_assets.values()}
+        local_assets = cls.local_assets._get() or {}
+        local_paths = {asset['path'] for asset in local_assets.values() if isinstance(asset, dict) and 'path' in asset}
 
         for path in Path('public').rglob('*'):
             if path.is_file() and str(path) not in local_paths:
@@ -128,10 +144,25 @@ class AssetDatabase:
         Returns:
             str: Link to the asset.
         """
-        if key in cls.local_assets._get():
+        if key == 'subscribe animation':
+            if Path("public/subscribe-animation.mp4").exists():
+                return "public/subscribe-animation.mp4"
+            if Path("/app/public/subscribe-animation.mp4").exists():
+                return "/app/public/subscribe-animation.mp4"
+        local = cls.local_assets._get() or {}
+        remote = cls.remote_assets._get() or {}
+        if key in local:
             return cls._update_local_asset_timestamp_and_get_link(key)
-        elif key in cls.remote_assets._get():
+        elif key in remote:
             return cls._get_remote_asset_link(key)
+        elif Path(key).exists():
+            return key
+        elif Path(f"public/{key}").exists():
+            return f"public/{key}"
+        elif Path(f"public/{key}.mp4").exists():
+            return f"public/{key}.mp4"
+        elif Path(f"public/{key}.wav").exists():
+            return f"public/{key}.wav"
         else:
             raise ValueError(f"Asset '{key}' does not exist in the database.")
 
@@ -146,10 +177,22 @@ class AssetDatabase:
         Returns:
             str: Duration of the asset.
         """
-        if key in cls.local_assets._get():
+        if key == 'subscribe animation':
+            if Path("public/subscribe-animation.mp4").exists():
+                _, dur = get_asset_duration("public/subscribe-animation.mp4", isVideo=True)
+                return dur
+        local = cls.local_assets._get() or {}
+        remote = cls.remote_assets._get() or {}
+        if key in local:
             return cls._get_local_asset_duration(key)
-        elif key in cls.remote_assets._get():
+        elif key in remote:
             return cls._get_remote_asset_duration(key)
+        elif Path(key).exists():
+            _, dur = get_asset_duration(key, isVideo=True)
+            return dur
+        elif Path(f"public/{key}").exists():
+            _, dur = get_asset_duration(f"public/{key}", isVideo=True)
+            return dur
         else:
             raise ValueError(f"Asset '{key}' does not exist in the database.")
 
@@ -240,12 +283,14 @@ class AssetDatabase:
             str: Duration of the asset.
         """
         asset = cls.local_assets._get(key)
+        if not asset:
+            return None
         asset['ts'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cls.local_assets._save({key: asset})
-        if 'duration' not in asset and asset['duration'] is not None:
-            _, duration = cls._update_local_asset_duration(key)
-            return duration
-        return asset['duration']
+        if 'duration' in asset and asset.get('duration') is not None:
+            return asset['duration']
+        _, duration = cls._update_local_asset_duration(key)
+        return duration
 
     @classmethod
     def _get_remote_asset_duration(cls, key: str) -> str:

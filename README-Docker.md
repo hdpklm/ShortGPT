@@ -11,11 +11,17 @@ PEXELS_API_KEY=put_your_pexels_api_key_here
 ```
 
 
-To run Dockerfile do this:
+To run Dockerfile in background (detached mode) with persistent storage:
 ```bash
 docker build -t short_gpt_docker:latest .
-docker run -p 31415:31415 --env-file .env short_gpt_docker:latest
+docker run -d --name short_gpt -p 31415:31415 --restart unless-stopped --env-file .env -v "C:/docker/storage/ShortGPT/public:/app/public" -v "C:/docker/storage/ShortGPT/videos:/app/videos" -v "C:/docker/storage/ShortGPT/database:/app/.database" short_gpt_docker:latest
 ```
+
+Or using Docker Compose:
+```bash
+docker compose up -d
+```
+
 Export Docker image:
 ```bash
 docker save short_gpt_docker > short_gpt_docker.tar

@@ -1,0 +1,18 @@
+### 📝 Registro: [v0.1.33] - Actualización Integral de Módulos, LLMs Locales, Renderizado y GUI
+- **Problema**:
+	- Dependencia estricta de la API de pago de OpenAI y fallos de timeout o falta de cuota en entornos locales.
+	- El parseo de JSON mediante expresiones regulares (`extract_biggest_json`) fallaba ante JSONs anidados o respuestas con texto introductorio de los LLMs.
+	- Excepciones en `handle_videos.py` al recortar videos de fondo cuya duración era menor a la del audio sintetizado.
+	- Incompatibilidades de `AssetDatabase` al buscar activos locales sin extensión o la animación predeterminada `subscribe animation`.
+	- Componentes obsoletos de Gradio 3 en la carpeta `gui/` incompatibles con Gradio 4.x.
+	- Fallos en la detección de claves de API cuando contenían valores por defecto (`put_your_...`).
+	- Falta de infraestructura Docker simplificada para ejecución local.
+- **Causa**: Evolución de librerías base (Gradio 4, MoviePy 2, APIs de LLMs) y necesidad de soporte para proveedores alternativos y locales (LM Studio, Gemini, Ollama).
+- **Solución**:
+	- `shortGPT/gpt/gpt_utils.py`: Implementación de soporte para endpoints compatibles con OpenAI (`LLM_BASE_URL`, `LLM_MODEL`), Gemini API oficial y fallback por defecto a LM Studio (`http://host.docker.internal:1234/v1`). Reemplazo de regex por un analizador de llaves balanceadas con pila para extraer JSON de forma robusta.
+	- `shortGPT/gpt/gpt_yt.py` y `shortGPT/gpt/reddit_gpt.py`: Manejo defensivo con reintentos y valores por defecto seguros en caso de fallo del LLM.
+	- `shortGPT/editing_utils/handle_videos.py`: Inclusión de `-stream_loop -1` en el comando FFmpeg para loopear videos de fondo más cortos que la pista de audio sin lanzar excepciones.
+	- `shortGPT/config/asset_db.py` y `shortGPT/config/api_db.py`: Normalización de rutas locales (`public/subscribe-animation.mp4`), cálculo de duraciones dinámicas y filtrado de strings `put_your_...` en la lectura de API keys.
+	- `gui/`: Actualización de la interfaz en Gradio 4 (`gui_gradio.py`, `ui_tab_config.py`, `asset_components.py`, `ui_tab_short_automation.py`) agregando selectores de proveedor LLM, colas asíncronas y previsualización segura de assets.
+	- `Dockerfile` y `docker-compose.yml`: Configuración de entorno contenedorizado con mapeo de volúmenes para assets y videos renderizados.
+	- `gemini_test/short_test/test_render.py`: Script de prueba para validar el motor de renderizado y composición de MoviePy/FFmpeg de manera aislada.

@@ -1,0 +1,9 @@
+### 📝 Registro: [v0.1.32] - Creación de Documentación Estructural y Sistema de Estado
+- **Problema**:
+	- Ausencia de un documento centralizado (`struct.md`) que describa la arquitectura global, tecnologías, proceso paso a paso y catálogo de prompts del proyecto.
+	- Falta de los archivos de seguimiento del protocolo de desarrollo `project_status.md` y `project_log.md`.
+- **Causa**: Inicialización de la documentación estructural requerida por el usuario y configuración del protocolo de trazabilidad de cambios.
+- **Solución**:
+	- Creación del archivo `struct.md` en la raíz con el detalle técnico de tecnologías (Python, OpenAI, Edge-TTS, ElevenLabs, Whisper, MoviePy, FFmpeg, Gradio), pipeline de 8 pasos del motor de video y catálogo exhaustivo de los 13 templates YAML de prompts.
+	- Creación de `project_status.md` documentando la arquitectura, módulos, firmas de funciones y endpoints/UI.
+	- Creación e inicialización de `project_log.md` para el registro histórico inmutable de cambios.

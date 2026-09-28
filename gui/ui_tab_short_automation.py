@@ -58,7 +58,7 @@ class ShortAutomationUI(AbstractComponentUI):
                 video_folder = gr.Button("📁", visible=True)
                 output = gr.HTML('<div style="min-height: 80px;"></div>')
 
-            video_folder.click(lambda _: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
+            video_folder.click(lambda: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
 
             createButton.click(self.inspect_create_inputs, inputs=[AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), watermark, short_type, facts_subject], outputs=[generation_error]).success(self.create_short, inputs=[
                 numShorts,
@@ -82,6 +82,14 @@ class ShortAutomationUI(AbstractComponentUI):
         try:
             numShorts = int(numShorts)
             numImages = int(numImages) if numImages else None
+            if not background_video_list:
+                background_video_list = AssetComponentsUtils.getBackgroundVideoChoices()
+            if not background_music_list:
+                background_music_list = AssetComponentsUtils.getBackgroundMusicChoices()
+            if not background_video_list:
+                raise Exception("No background videos available. Please add one in the Asset Library.")
+            if not background_music_list:
+                raise Exception("No background music available. Please add one in the Asset Library.")
             background_videos = (background_video_list * ((numShorts // len(background_video_list)) + 1))[:numShorts]
             background_musics = (background_music_list * ((numShorts // len(background_music_list)) + 1))[:numShorts]
             if tts_engine == AssetComponentsUtils.ELEVEN_TTS:
@@ -129,11 +137,11 @@ class ShortAutomationUI(AbstractComponentUI):
         if short_type == "Custom Facts shorts":
             if not facts_subject:
                 raise gr.Error("Please write down your facts short's subject")
-        if not background_video_list:
-            raise gr.Error("Please select at least one background video.")
+        if not background_video_list and not AssetComponentsUtils.getBackgroundVideoChoices():
+            raise gr.Error("Please upload or select at least one background video in 'Choose background video'.")
 
-        if not background_music_list:
-            raise gr.Error("Please select at least one background music.")
+        if not background_music_list and not AssetComponentsUtils.getBackgroundMusicChoices():
+            raise gr.Error("Please upload or select at least one background music in 'Choose background music'.")
 
         if watermark != "":
             if not watermark.replace(" ", "").isalnum():
@@ -145,8 +153,9 @@ class ShortAutomationUI(AbstractComponentUI):
 
         openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
         gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-        if not openai_key and not gemini_key:
-            raise gr.Error("GEMINI OR OPENAI API key is missing. Please go to the config tab and enter the API key.")
+        llm_base_url = ApiKeyManager.get_api_key("LLM_BASE_URL")
+        if not openai_key and not gemini_key and not llm_base_url:
+            raise gr.Error("LLM configuration is missing (Gemini, OpenAI, LM-Studio or Ollama). Please go to the config tab and enter it.")
         eleven_labs_key = ApiKeyManager.get_api_key("ELEVENLABS_API_KEY")
         if self.tts_engine == AssetComponentsUtils.ELEVEN_TTS and not eleven_labs_key:
             raise gr.Error("ELEVENLABS_API_KEY API key is missing. Please go to the config tab and enter the API key.")

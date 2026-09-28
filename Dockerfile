@@ -1,5 +1,5 @@
 # Use an official Python runtime as the parent image
-FROM python:3.10-slim-bullseye
+FROM python:3.10-slim-bookworm
 RUN apt-get update && apt-get install -y ffmpeg
 
 # Set the working directory in the container to /app

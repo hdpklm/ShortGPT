@@ -27,33 +27,52 @@ def getYoutubeVideoLink(url):
 def extract_random_clip_from_video(video_url, video_duration, clip_duration, output_file):
     """Extracts a clip from a video using a signed URL.
     Args:
-        video_url (str): The signed URL of the video.
-        video_url (int): Duration of the video.
-        start_time (int): The start time of the clip in seconds.
-        clip_duration (int): The duration of the clip in seconds.
+        video_url (str): The signed URL or local path of the video.
+        video_duration (float): Duration of the video.
+        clip_duration (float): The duration of the clip in seconds.
         output_file (str): The output file path for the extracted clip.
     """
-    if not video_duration:
-        raise Exception("Could not get video duration")
-    if not video_duration*0.7 > 120:
-        raise Exception("Video too short")
-    start_time = video_duration*0.15 + random.random()* (0.7*video_duration-clip_duration)
-    
-    command = [
-        'ffmpeg',
-        '-loglevel', 'error',
-        '-ss', str(start_time),
-        '-t', str(clip_duration),
-        '-i', video_url,
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        output_file
-    ]
+    try:
+        video_duration = float(video_duration) if video_duration else 0.0
+    except (ValueError, TypeError):
+        video_duration = 0.0
+
+    try:
+        clip_duration = float(clip_duration) if clip_duration else 30.0
+    except (ValueError, TypeError):
+        clip_duration = 30.0
+
+    if video_duration > clip_duration:
+        max_start = max(0.0, video_duration - clip_duration)
+        start_time = random.uniform(0.0, max_start)
+        command = [
+            'ffmpeg', '-y',
+            '-loglevel', 'error',
+            '-ss', str(start_time),
+            '-t', str(clip_duration),
+            '-i', video_url,
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-preset', 'ultrafast',
+            output_file
+        ]
+    else:
+        command = [
+            'ffmpeg', '-y',
+            '-loglevel', 'error',
+            '-stream_loop', '-1',
+            '-i', video_url,
+            '-t', str(clip_duration),
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-preset', 'ultrafast',
+            output_file
+        ]
     
     subprocess.run(command, check=True)
     
-    if not os.path.exists(output_file):
-        raise Exception("Random clip failed to be written")
+    if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
+        raise Exception("Random clip failed to be written or is empty")
     return output_file
 
 

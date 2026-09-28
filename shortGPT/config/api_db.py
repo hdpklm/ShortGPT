@@ -8,6 +8,8 @@ class ApiProvider(enum.Enum):
     GEMINI = "GEMINI_API_KEY"
     ELEVEN_LABS = "ELEVENLABS_API_KEY"
     PEXELS = "PEXELS_API_KEY"
+    LLM_BASE_URL = "LLM_BASE_URL"
+    LLM_MODEL = "LLM_MODEL"
 
 
 class ApiKeyManager:
@@ -20,14 +22,14 @@ class ApiKeyManager:
             
         # Check if the key is present in the database
         api_key = cls.api_key_doc_manager._get(key)
-        if api_key:
-            return api_key
+        if api_key and isinstance(api_key, str) and not ("put_your" in api_key.lower()):
+            return api_key.strip()
 
         # If not found in the database, check in the environment variables
         env_key = key.replace(" ", "_").upper()
         api_key = os.environ.get(env_key)
-        if api_key:
-            return api_key
+        if api_key and isinstance(api_key, str) and not ("put_your" in api_key.lower()):
+            return api_key.strip()
         
         return ""
 

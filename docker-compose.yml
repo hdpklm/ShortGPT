@@ -1,0 +1,16 @@
+services:
+  shortgpt:
+    build: .
+    image: short_gpt_docker:latest
+    container_name: short_gpt
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "31415:31415"
+    env_file:
+      - .env
+    volumes:
+      - "C:/docker/storage/ShortGPT/public:/app/public"
+      - "C:/docker/storage/ShortGPT/videos:/app/videos"
+      - "C:/docker/storage/ShortGPT/database:/app/.database"

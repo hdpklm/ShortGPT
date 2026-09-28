@@ -49,7 +49,7 @@ class VideoTranslationUI(AbstractComponentUI):
                 video_folder = gr.Button("📁", visible=True)
                 output = gr.HTML('<div style="min-height: 80px;"></div>')
 
-            video_folder.click(lambda _: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
+            video_folder.click(lambda: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
             translateButton.click(self.inspect_create_inputs, inputs=[videoType, video_path, yt_link, tts_engine, language_eleven, language_edge, ], outputs=[generation_error]).success(self.translate_video, inputs=[
                 videoType, yt_link, video_path, tts_engine, language_eleven, language_edge, useCaptions, voice_eleven
             ], outputs=[output, video_folder, generation_error])

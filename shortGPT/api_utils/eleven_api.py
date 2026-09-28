@@ -8,6 +8,7 @@ class ElevenLabsAPI:
     def __init__(self, api_key):
         self.api_key = api_key
         self.url_base = 'https://api.elevenlabs.io/v1/'
+        self.voices = {}
         self.get_voices()
 
     def get_voices(self):
@@ -16,8 +17,18 @@ class ElevenLabsAPI:
         headers = {'accept': 'application/json'}
         if self.api_key:
             headers['xi-api-key'] = self.api_key
-        response = requests.get(url, headers=headers)
-        self.voices = {voice['name']: voice['voice_id'] for voice in response.json()['voices']}
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict) and 'voices' in data:
+                    self.voices = {voice['name']: voice['voice_id'] for voice in data['voices']}
+                else:
+                    self.voices = {}
+            else:
+                self.voices = {}
+        except Exception:
+            self.voices = {}
         return self.voices
 
     def get_remaining_characters(self):

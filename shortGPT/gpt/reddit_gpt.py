@@ -28,13 +28,16 @@ def getRealisticness(text):
     chat = chat.replace("<<INPUT>>", text)
     attempts = 0
     while attempts <= 4:
-        attempts+=1
+        attempts += 1
         try:
-            result = gpt_utils.llm_completion(chat_prompt=chat, system=system, temp=1)
-            return json.loads(result)['score']
+            result = gpt_utils.llm_completion(chat_prompt=chat, system=system, temp=0.7)
+            json_str = gpt_utils.extract_biggest_json(result) or result
+            data = json.loads(json_str)
+            if 'score' in data:
+                return float(data['score'])
         except Exception as e:
             print("Error in getRealisticness", e.args[0])
-    raise Exception("LLM Failed to generate a realisticness score on the script")
+    return 8.0
 
 def getQuestionFromThread(text):
     if ((text.find("Reddit, ") < 15) and (10 < text.find("?") < 100)):

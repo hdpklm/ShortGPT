@@ -29,10 +29,23 @@ def num_tokens_from_messages(texts, model="gpt-4o-mini"):
 
 
 def extract_biggest_json(string):
-    json_regex = r"\{(?:[^{}]|(?R))*\}"
-    json_objects = re.findall(json_regex, string)
-    if json_objects:
-        return max(json_objects, key=len)
+    if not string or not isinstance(string, str):
+        return None
+    candidates = []
+    stack = []
+    start_idx = None
+    for idx, char in enumerate(string):
+        if char == '{':
+            if not stack:
+                start_idx = idx
+            stack.append(char)
+        elif char == '}' and stack:
+            stack.pop()
+            if not stack and start_idx is not None:
+                candidates.append(string[start_idx:idx+1])
+                start_idx = None
+    if candidates:
+        return max(candidates, key=len)
     return None
 
 
@@ -70,20 +83,33 @@ def open_file(filepath):
 from openai import OpenAI
 
 def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
-    openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
+    openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
     gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-    if gemini_key:
+    llm_base_url = ApiKeyManager.get_api_key("LLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL")
+    llm_model = ApiKeyManager.get_api_key("LLM_MODEL") or os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL")
+
+    if llm_base_url:
+        client = OpenAI(
+            api_key=openai_key or "lm-studio",
+            base_url=llm_base_url
+        )
+        model = llm_model or "local-model"
+    elif gemini_key:
         client = OpenAI( 
             api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
-        model="gemini-2.0-flash-lite-preview-02-05"
+        model = llm_model or "gemini-2.0-flash-lite-preview-02-05"
     elif openai_key:
-        client = OpenAI( api_key=openai_key)
-        model="gpt-4o-mini"
+        client = OpenAI(api_key=openai_key)
+        model = llm_model or "gpt-4o-mini"
     else:
-        raise Exception("No OpenAI or Gemini API Key found for LLM request")
-    max_retry = 5
+        client = OpenAI(
+            api_key="lm-studio",
+            base_url="http://host.docker.internal:1234/v1"
+        )
+        model = "local-model"
+    max_retry = 3
     retry = 0
     error = ""
     for i in range(max_retry):
@@ -91,20 +117,21 @@ def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_
             if conversation:
                 messages = conversation
             else:
-                messages = [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": chat_prompt}
-                ]
+                messages = []
+                if system:
+                    messages.append({"role": "system", "content": system})
+                if chat_prompt:
+                    messages.append({"role": "user", "content": chat_prompt})
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temp,
-                timeout=30
+                timeout=60
                 )
             text = response.choices[0].message.content.strip()
             if remove_nl:
-                text = re.sub('\s+', ' ', text)
+                text = re.sub(r'\s+', ' ', text)
             filename = '%s_llm_completion.txt' % time()
             if not os.path.exists('.logs/gpt_logs'):
                 os.makedirs('.logs/gpt_logs')

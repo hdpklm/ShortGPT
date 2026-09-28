@@ -27,7 +27,6 @@ class CoreEditingEngine:
                 clip = self.process_image_asset(asset)
             elif asset_type == 'text':
                 clip = self.process_text_asset(asset)
-                clips.append(clip)
             else:
                 raise ValueError(f'Invalid asset type: {asset_type}')
             clips.append(clip)
@@ -78,11 +77,18 @@ class CoreEditingEngine:
             video = video.with_duration(audio.duration)
         if force_duration:
             video = video.with_duration(force_duration)
+        threads = threads or 1
         if logger:
             my_logger = MoviepyProgressLogger(callBackFunction=logger)
-            video.write_videofile(output_file, threads=threads,codec='libx264', audio_codec='aac', fps=25, preset='veryfast', logger=my_logger)
+            video.write_videofile(output_file, threads=threads, codec='libx264', audio_codec='aac', fps=25, preset='ultrafast', logger=my_logger)
         else:
-            video.write_videofile(output_file, threads=threads,codec='libx264', audio_codec='aac', fps=25, preset='veryfast')
+            video.write_videofile(output_file, threads=threads, codec='libx264', audio_codec='aac', fps=25, preset='ultrafast')
+        try:
+            video.close()
+            import gc
+            gc.collect()
+        except Exception:
+            pass
         return output_file
     
     def generate_audio(self, schema:Dict[str, Any], output_file, logger=None) -> None:

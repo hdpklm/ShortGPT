@@ -85,9 +85,12 @@ class TinyMongoDocument(AbstractDatabaseDocument):
         with self._lock:
             try:
                 document = self.collection.find_one({'_id': self.document_id})
-                if not key:
-                    del document['_id']
-                    return document
+                if document is None:
+                    return {} if key is None else None
+                if key is None:
+                    doc = dict(document)
+                    doc.pop('_id', None)
+                    return doc
                 keys = key.split(".")
                 value = document[keys[0]]
                 for k in keys[1:]:
@@ -95,7 +98,7 @@ class TinyMongoDocument(AbstractDatabaseDocument):
                 return value
             except Exception as e:
                 #print(f"Error getting value for key '{key}': {e}")
-                return None
+                return {} if key is None else None
 
     def _delete(self, key):
         with self._lock:
